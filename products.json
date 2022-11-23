@@ -1,0 +1,30 @@
+[
+    {
+        "name": "Heels",
+        "image": "heels.jpg",
+        "rating": "3",
+        "Price": "$20",
+        "Category": "clothes"
+    },
+    {
+        "name": "Men Shoe",
+        "image": "shoe.jpeg",
+        "rating": "3",
+        "Price": "$20",
+        "Category": "clothes"
+    },
+    {
+        "name": "Smart Watch",
+        "image": "watch.jpeg",
+        "rating": "2",
+        "Price": "$100",
+        "Category": "clothes"
+    },
+    {
+        "name": "Toy",
+        "image": "car-toy.jpeg",
+        "rating": "5",
+        "Price": "$10",
+        "Category": "toy"
+    }
+]
