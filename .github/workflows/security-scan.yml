@@ -1,0 +1,63 @@
+name: Security Signature Scan
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for known supply-chain backdoor signatures
+        shell: bash
+        run: |
+          set -uo pipefail
+          FAIL=0
+
+          echo "== Checking for obfuscator.io-style packed payload signature =="
+          HITS=$(grep -rlE 'while\(!\[\]\)\{try\{' --include='*' -- . 2>/dev/null | grep -v '^\./\.git/' || true)
+          if [ -n "$HITS" ]; then
+            echo "::error::Obfuscated payload signature found in:"
+            echo "$HITS"
+            FAIL=1
+          fi
+
+          echo "== Checking .vscode/tasks.json for hidden folderOpen auto-run tasks =="
+          if [ -f .vscode/tasks.json ] && grep -q 'folderOpen' .vscode/tasks.json; then
+            echo "::error::.vscode/tasks.json contains a runOn: folderOpen task - review it before merging."
+            FAIL=1
+          fi
+
+          echo "== Checking .vscode/settings.json for disabled auto-run confirmation =="
+          if [ -f .vscode/settings.json ] && grep -qE '"task.allowAutomaticTasks"[[:space:]]*:[[:space:]]*true' .vscode/settings.json; then
+            echo "::error::.vscode/settings.json sets task.allowAutomaticTasks: true (suppresses VS Code's confirmation prompt) - review it."
+            FAIL=1
+          fi
+
+          echo "== Checking for disguised .orc files (not a real font/asset format) =="
+          ORC=$(find . -iname '*.orc' -not -path './.git/*' 2>/dev/null || true)
+          if [ -n "$ORC" ]; then
+            echo "::error::Suspicious .orc file(s) found:"
+            echo "$ORC"
+            FAIL=1
+          fi
+
+          echo "== Checking for a root-level 'init' file with no extension =="
+          if [ -f ./init ]; then
+            echo "::warning::Root-level 'init' file found - verify this is legitimate and not an auto-executed payload (watch for node init in package.json scripts)."
+          fi
+
+          if [ "$FAIL" = "1" ]; then
+            echo ""
+            echo "Security scan FAILED - see errors above."
+            exit 1
+          fi
+          echo "Security scan passed - no known backdoor signatures found."
